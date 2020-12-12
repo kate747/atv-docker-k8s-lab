@@ -1,0 +1,114 @@
+configuration: |-
+  ## Clustering
+  cluster_formation.peer_discovery_backend  = rabbit_peer_discovery_k8s
+  cluster_formation.k8s.host = kubernetes.default.svc.{{ .Values.clusterDomain }}
+  cluster_formation.node_cleanup.interval = 10
+  cluster_formation.node_cleanup.only_log_warning = true
+  cluster_partition_handling = autoheal
+  # queue master locator
+  queue_master_locator = min-masters
+  # enable guest user
+  loopback_users.guest = false
+  {{ tpl .Values.extraConfiguration . }}
+  {{- if .Values.auth.tls.enabled }}
+  ssl_options.verify = {{ .Values.auth.tls.sslOptionsVerify }}
+  listeners.ssl.default = {{ .Values.service.tlsPort }}
+  ssl_options.fail_if_no_peer_cert = {{ .Values.auth.tls.failIfNoPeerCert }}
+  ssl_options.cacertfile = /opt/bitnami/rabbitmq/certs/ca_certificate.pem
+  ssl_options.certfile = /opt/bitnami/rabbitmq/certs/server_certificate.pem
+  ssl_options.keyfile = /opt/bitnami/rabbitmq/certs/server_key.pem
+  {{- end }}
+  {{- if .Values.ldap.enabled }}
+  auth_backends.1 = rabbit_auth_backend_ldap
+  auth_backends.2 = internal
+  {{- range $index, $server := .Values.ldap.servers }}
+  auth_ldap.servers.{{ add $index 1 }} = {{ $server }}
+  {{- end }}
+  auth_ldap.port = {{ .Values.ldap.port }}
+  auth_ldap.user_dn_pattern = {{ .Values.ldap.user_dn_pattern  }}
+  {{- if .Values.ldap.tls.enabled }}
+  auth_ldap.use_ssl = true
+  {{- end }}
+  {{- end }}
+  {{- if .Values.metrics.enabled }}
+  ## Prometheus metrics
+  prometheus.tcp.port = 9419
+  {{- end }}
+  {{- if .Values.memoryHighWatermark.enabled }}
+  ## Memory Threshold
+  total_memory_available_override_value = {{ include "rabbitmq.toBytes" .Values.resources.limits.memory }}
+  vm_memory_high_watermark.{{ .Values.memoryHighWatermark.type }} = {{ .Values.memoryHighWatermark.value }}
+  {{- end }}
+
+extraConfiguration: |-
+  load_definitions = /app/load_definition.json
+
+extraSecrets:
+  load-definition:
+    load_definition.json: |
+      {
+        "users": [
+          {
+            "name": "admin",
+            "password": "admin",
+            "tags": "administrator"
+          }
+        ],
+        "vhosts": [
+          {
+            "name": "/"
+          }
+        ],
+        "queues": [
+          {
+            "name": "MQ",
+            "vhost": "/",
+            "durable": true,
+            "auto_delete": false,
+            "arguments": {
+              "x-queue-type": "classic"
+            }
+          }
+        ],
+        "permissions": [
+            {
+                "user": "admin",
+                "vhost": "/",
+                "configure": ".*",
+                "write": ".*",
+                "read": ".*"
+            }
+        ]
+      }
+
+loadDefinition:
+  enabled: true
+  existingSecret: load-definition
+
+persistence:
+  enabled: false
+
+service:
+  type: ClusterIP
+  port: 5672
+  portName: amqp
+  tlsPort: 5671
+  tlsPortName: amqp-ssl
+  distPort: 25672
+  distPortName: dist
+  managerPort: 15672
+  managerPortName: http-stats
+  metricsPort: 9419
+  metricsPortName: metrics
+  epmdPortName: epmd
+  extraPorts: []
+  labels: {}
+  annotations: {}
+
+resources:
+  limits:
+    cpu: 500m
+    memory: 1G
+  requests:
+    cpu: 500m
+    memory: 1G

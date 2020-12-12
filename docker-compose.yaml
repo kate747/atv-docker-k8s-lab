@@ -1,0 +1,59 @@
+version: '3.8'
+
+services:
+  rabbitmq:
+    image: rabbitmq:3.8.9-management
+    volumes:
+      - ./rmq/definitions.json:/opt/definitions.json:ro
+      - ./rmq/rabbitmq.config:/etc/rabbitmq/rabbitmq.config:ro
+    deploy:
+      resources:
+        limits:
+          cpus: "2"
+          memory: "1G"
+  postgres:
+    image: postgres:13.1-alpine
+    volumes:
+      - ./postgres/init.sql:/docker-entrypoint-initdb.d/init.sql
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    ports:
+      - 5432:5432
+  rmq-listener:
+    build:
+      context: rmq-listener
+    environment:
+      RMQ_ENDPOINT: rabbitmq
+      RMQ_QUEUE: ${RMQ_QUEUE}
+      RMQ_USERNAME: ${RMQ_USERNAME}
+      RMQ_PASSWORD: ${RMQ_PASSWORD}
+      POSTGRES_ENDPOINT: postgres
+      POSTGRES_DATABASE: ${POSTGRES_DB}
+      POSTGRES_USERNAME: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    restart: on-failure
+    depends_on:
+      - rabbitmq
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: "250m"
+  rmq-producer:
+    build:
+      context: rmq-producer
+    environment:
+      RMQ_ENDPOINT: rabbitmq
+      RMQ_QUEUE: ${RMQ_QUEUE}
+      RMQ_USERNAME: ${RMQ_USERNAME}
+      RMQ_PASSWORD: ${RMQ_PASSWORD}
+    restart: on-failure
+    depends_on:
+      - rabbitmq
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: "250m"

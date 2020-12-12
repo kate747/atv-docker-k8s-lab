@@ -1,0 +1,39 @@
+## PostgreSQL user (has superuser privileges if username is `postgres`)
+## ref: https://github.com/bitnami/bitnami-docker-postgresql/blob/master/README.md#setting-the-root-password-on-first-run
+##
+postgresqlUsername: postgres
+
+## PostgreSQL password
+## ref: https://github.com/bitnami/bitnami-docker-postgresql/blob/master/README.md#setting-the-root-password-on-first-run
+##
+postgresqlPassword: postgres
+
+## Create a database
+## ref: https://github.com/bitnami/bitnami-docker-postgresql/blob/master/README.md#creating-a-database-on-first-run
+##
+postgresqlDatabase: atv-demo
+
+initdbScripts:
+ my_init_script.sql: |
+  CREATE TABLE IF NOT EXISTS users
+  (
+      id    uuid PRIMARY KEY,
+      name  varchar(256),
+      email varchar(256)
+  );
+
+  CREATE TABLE IF NOT EXISTS orders
+  (
+      id              uuid primary key,
+      user_id         uuid references users (id),
+      total_count     decimal,
+      order_timestamp integer
+  );
+
+resources:
+  limits:
+    cpu: 500m
+    memory: 1G
+  requests:
+    cpu: 500m
+    memory: 1G

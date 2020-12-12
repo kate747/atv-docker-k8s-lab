@@ -1,0 +1,54 @@
+replicaCount: 1
+
+image:
+  repository: katok747/rmq-listener
+  pullPolicy: IfNotPresent
+  tag: "0.1"
+
+resources:
+  limits:
+    cpu: 100m
+    memory: 128Mi
+  requests:
+    cpu: 100m
+    memory: 128Mi
+
+env:
+  rmqEndpoint: rmq-rabbitmq.rmq
+  rmqQueue: MQ
+  rmqUsername: admin
+  rmqPassword: admin
+  rmqPort: 5672
+  rmqVh: /
+  postgresEndpoint: postgres-postgresql.postgres
+  postgresUsername: postgres
+  postgresPassword: postgres
+  postgresDatabase: atv-demo
+  postgresPort: 5432
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+serviceAccount:
+  create: false
+  annotations: {}
+  name: ""
+
+podAnnotations: {}
+
+podSecurityContext: {}
+
+securityContext: {}
+
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 100
+  targetCPUUtilizationPercentage: 80
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}
